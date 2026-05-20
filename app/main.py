@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.database import engine, Base
-from app.routers import auth, books, authors, reviews, analytics
+from app.routers import auth, books, authors, reviews, analytics, recommendations
 
 
 @asynccontextmanager
@@ -24,6 +24,7 @@ app.include_router(authors.router, prefix="/authors", tags=["Авторы"])
 app.include_router(books.router, prefix="/books", tags=["Книги"])
 app.include_router(reviews.router, prefix="/reviews", tags=["Отзывы"])
 app.include_router(analytics.router, prefix="/analytics", tags=["Аналитика"])
+app.include_router(recommendations.router, prefix="/recommendations", tags=["Рекомендации"])
 
 
 @app.get("/")

@@ -11,6 +11,8 @@ from app.crud import (
 )
 from app.auth import get_current_user
 from app.models import User
+from app.routers.deps import get_task_queue
+from app.core.task_queue import TaskQueueProtocol  
 
 router = APIRouter()
 
@@ -20,8 +22,15 @@ def create_new_review(
     review: ReviewCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    queue: TaskQueueProtocol = Depends(get_task_queue),  # <-- новая зависимость
 ):
-    return create_review(db=db, review=review, user_id=current_user.id)
+    # 1. Сохраняем оценку в БД
+    created_review = create_review(db=db, review=review, user_id=current_user.id)
+
+    # 2. После успешного коммита ставим задачу в очередь
+    queue.enqueue("recalculate_user", {"user_id": current_user.id})
+
+    return created_review
 
 
 @router.get("/", response_model=list[ReviewResponse])

@@ -10,6 +10,7 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+    reading_events = relationship("ReadingEvent", back_populates="user")
 
 
 class Author(Base):
@@ -27,6 +28,7 @@ class Book(Base):
     author_id = Column(Integer, ForeignKey("authors.id"))
     author = relationship("Author", back_populates="books")
     reviews = relationship("Review", back_populates="book")
+    reading_events = relationship("ReadingEvent", back_populates="book")
 
 
 class Review(Base):

@@ -1,4 +1,5 @@
 from functools import lru_cache
+
 from app.core.task_queue import TaskQueueProtocol
 from app.infrastructure.in_memory_queue import InMemoryTaskQueue
 from app.infrastructure.redis_queue import RedisTaskQueue

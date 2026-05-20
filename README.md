@@ -14,18 +14,16 @@
 ## Установка и запуск
 
 ```bash
-# Клонировать репозиторий и перейти в папку проекта
-git clone <repo-url>
+# Основной сервис
+uv run uvicorn app.main:app --reload
 
-# Создать виртуальное окружение через uv
-uv venv
+# Воркер (в отдельном терминале)
+uv run python -m app.recommender.worker
 
-# Установить зависимости
-uv pip install -r requirements.txt
-
-# Запустить сервер разработки
-cd book_catalog
-uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+# С инфраструктурой (Redis)
+docker compose up -d redis
+uv run uvicorn app.main:app --reload  # в другом терминале
+uv run python -m app.recommender.worker  # в третьем
 ```
 
 База данных `catalog.db` создаётся автоматически при первом запуске.

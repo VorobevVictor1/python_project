@@ -53,6 +53,5 @@ def run_worker_loop(
             if task:
                 process_recommendation_task(task, db, queue)
         except Exception as e:
-            logger.error(f"Worker error: {e}")
-            # В продакшене здесь стоит добавить retry с экспоненциальной задержкой
+            logger.error(f"Worker error processing task: {e}")
             time.sleep(10)

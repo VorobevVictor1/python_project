@@ -31,4 +31,4 @@ class UserRecommendations:
     user_id: int
     recommendations: List[Recommendation] = field(default_factory=list)
     generated_at: datetime = field(default_factory=datetime.utcnow)
-    algorithm_version: str = "cosine_v1"
+    algorithm_version: str = "cosine_numpy_v1"

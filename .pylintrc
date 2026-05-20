@@ -1,0 +1,82 @@
+[MASTER]
+# Файлы и папки для анализа
+init-hook='import sys; sys.path.append(".")'
+ignore=.venv,__pycache__,tests,htmlcov,migrations,alembic
+extension-pkg-whitelist=pydantic,cython
+
+[MESSAGES CONTROL]
+# Отключаем шумные/нерелевантные проверки для учебного FastAPI-проекта
+disable=
+    # Документация (не требуется для курсового)
+    missing-module-docstring,
+    missing-class-docstring,
+    missing-function-docstring,
+    # Стиль (покрывается black/ruff)
+    line-too-long,
+    too-many-arguments,
+    too-many-locals,
+    too-few-public-methods,
+    too-many-instance-attributes,
+    # FastAPI/Pydantic специфика
+    unused-argument,          # зависимости FastAPI часто не используются напрямую
+    no-member,                # Pydantic/SQLAlchemy динамические атрибуты
+    not-callable,             # ложные срабатывания на декораторах
+    protected-access,         # _calc_checksum и т.п. в легаси-библиотеках
+    # Проектирование
+    too-many-public-methods,
+    too-many-return-statements,
+    too-many-branches,
+    too-many-statements,
+    # Импорт
+    import-outside-toplevel,
+    import-error,             # иногда ложно срабатывает на uv-окружении
+    # Переменные
+    invalid-name,             # разрешаем короткие имена в тестах (db, req)
+    redefined-outer-name,     # фикстуры pytest переопределяют имена
+    # Прочее
+    duplicate-code,           # CRUD-функции похожи — это нормально
+    broad-exception-caught   # HTTPException ловим широко — осознанно
+
+# Включаем важные проверки
+enable=
+    unused-import,
+    unused-variable,
+    undefined-variable,
+    syntax-error
+
+[FORMAT]
+max-line-length=120
+max-module-lines=500
+
+[TYPECHECK]
+# Игнорируем динамические атрибуты популярных библиотек
+ignored-classes=
+    sqlalchemy.orm.Session,
+    sqlalchemy.sql.expression.Column,
+    pydantic.main.BaseModel,
+    fastapi.routing.APIRouter
+generated-members=
+    query.*,
+    filter.*,
+    first.*,
+    all.*,
+    commit.*,
+    refresh.*,
+    model_dump.*,
+    model_validate.*,
+
+[DESIGN]
+# Допустимые лимиты для учебного проекта
+max-args=7
+max-locals=20
+max-returns=8
+max-branches=15
+max-statements=60
+
+[SIMILARITIES]
+# Порог для проверки дубликатов кода
+min-similarity-lines=8
+
+[VARIABLES]
+# Глобальные переменные, которые используются легально
+additional-builtins=Base,engine,SessionLocal

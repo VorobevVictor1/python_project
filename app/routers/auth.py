@@ -1,34 +1,32 @@
 """Эндпоинты аутентификации: регистрация, логин, профиль."""
 
 from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.models import User
-from app.schemas import UserCreate, UserResponse, Token
+
 from app.auth import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    create_access_token,
+    get_current_active_user,
     get_password_hash,
     verify_password,
-    create_access_token,
-    ACCESS_TOKEN_EXPIRE_MINUTES,
-    get_current_active_user,
 )
+from app.database import get_db
+from app.models import User
+from app.schemas import Token, UserCreate, UserResponse
 
 router = APIRouter(tags=["Авторизация"])
 
 
-@router.post(
-    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
-)
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(user_create: UserCreate, db: Session = Depends(get_db)):
     """Регистрация нового пользователя."""
     # Проверка уникальности
     existing = (
         db.query(User)
-        .filter(
-            (User.username == user_create.username) | (User.email == user_create.email)
-        )
+        .filter((User.username == user_create.username) | (User.email == user_create.email))
         .first()
     )
     if existing:
@@ -50,9 +48,7 @@ def register(user_create: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-def login(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
-):
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """
     Вход в систему.
 

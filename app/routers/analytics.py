@@ -1,13 +1,14 @@
 """Бизнес-логика и аналитические эндпоинты."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from datetime import datetime
 
-from app.database import get_db
-from app.schemas import BookResponse, RecommendationRequest
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
 from app.crud import get_books
+from app.database import get_db
 from app.models import Book
+from app.schemas import BookResponse, RecommendationRequest
 
 router = APIRouter()
 
@@ -68,6 +69,7 @@ def recommend_books(req: RecommendationRequest, db: Session = Depends(get_db)):
 def get_catalog_stats(db: Session = Depends(get_db)):
     """Простая статистика каталога — пример дополнительного аналитического эндпоинта."""
     from sqlalchemy import func
+
     from app.models import Review
 
     total_books = db.query(func.count(Book.id)).scalar()

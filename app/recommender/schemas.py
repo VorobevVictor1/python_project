@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional
 from datetime import datetime
+
+from pydantic import BaseModel, Field
 
 
 class RecommendationOut(BaseModel):
@@ -10,6 +10,6 @@ class RecommendationOut(BaseModel):
 
 class UserRecommendationsOut(BaseModel):
     user_id: int
-    recommendations: List[RecommendationOut] = Field(default_factory=list)
-    generated_at: Optional[datetime] = None
+    recommendations: list[RecommendationOut] = Field(default_factory=list)
+    generated_at: datetime | None = None
     algorithm_version: str = "cosine_numpy_v1"

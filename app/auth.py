@@ -1,19 +1,19 @@
 """Модуль аутентификации: JWT, хеширование паролей, зависимости."""
 
 from datetime import datetime, timedelta
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.models import User
 from app.schemas import TokenData
 
 # === Конфигурация ===
-SECRET_KEY = (
-    "dev-secret-key-change-in-production-please"  # 🔒 Вынесите в .env для продакшена
-)
+SECRET_KEY = "dev-secret-key-change-in-production-please"  # 🔒 Вынесите в .env для продакшена
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -33,9 +33,7 @@ def get_password_hash(password: str) -> str:
 # === JWT ===
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + (
-        expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    )
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -56,7 +54,7 @@ async def get_current_user(
             raise credentials_exception
         token_data = TokenData(username=username)
     except JWTError:
-        raise credentials_exception
+        raise credentials_exception from None
 
     user = db.query(User).filter(User.username == token_data.username).first()
     if user is None:

@@ -1,7 +1,9 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Index
-from sqlalchemy.orm import relationship
-from app.database import Base
 from datetime import datetime
+
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Index, Integer, String
+from sqlalchemy.orm import relationship
+
+from app.database import Base
 
 
 class User(Base):
@@ -40,41 +42,42 @@ class Review(Base):
     comment = Column(String, nullable=True)
     book = relationship("Book", back_populates="reviews")
 
+
 class ReadingEvent(Base):
     """Событие: пользователь прочитал книгу и поставил оценку.
-    
+
     Это сырые данные для алгоритма рекомендаций.
     Не путать с Review — это внутренняя аналитическая сущность.
     """
+
     __tablename__ = "reading_events"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     book_id = Column(Integer, ForeignKey("books.id"), nullable=False, index=True)
     rating = Column(Float, nullable=False)  # 1.0 - 5.0
     completed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    
+
     # Связи для удобной навигации
     user = relationship("User", back_populates="reading_events")
     book = relationship("Book", back_populates="reading_events")
-    
+
     # Уникальность: один пользователь — одна запись на книгу (последняя оценка)
-    __table_args__ = (
-        Index("idx_user_book_unique", "user_id", "book_id", unique=True),
-    )
+    __table_args__ = (Index("idx_user_book_unique", "user_id", "book_id", unique=True),)
 
 
 class RecommendationCache(Base):
     """Кэш предсчитанных рекомендаций.
-    
+
     Заполняется батч-воркером, читается API.
     """
+
     __tablename__ = "recommendation_cache"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True, index=True)
     recommended_book_ids = Column(String, nullable=False)  # JSON-список: "[1,5,23]"
-    scores = Column(String, nullable=False)                # JSON-список скоров: "[0.92,0.87,0.81]"
+    scores = Column(String, nullable=False)  # JSON-список скоров: "[0.92,0.87,0.81]"
     generated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    
+
     user = relationship("User")

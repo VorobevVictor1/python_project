@@ -1,18 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.schemas import ReviewCreate, ReviewResponse
+
+from app.auth import get_current_user
+from app.core.task_queue import TaskQueueProtocol
 from app.crud import (
     create_review,
-    get_reviews,
-    get_review,
-    update_review,
     delete_review,
+    get_review,
+    get_reviews,
+    update_review,
 )
-from app.auth import get_current_user
+from app.database import get_db
 from app.models import User
 from app.routers.deps import get_task_queue
-from app.core.task_queue import TaskQueueProtocol  
+from app.schemas import ReviewCreate, ReviewResponse
 
 router = APIRouter()
 
@@ -47,9 +48,7 @@ def read_reviews(
 def read_review(review_id: int, db: Session = Depends(get_db)):
     db_review = get_review(db, review_id=review_id)
     if db_review is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Отзыв не найден"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Отзыв не найден")
     return db_review
 
 
@@ -60,9 +59,7 @@ def update_existing_review(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    db_review = update_review(
-        db, review_id=review_id, review=review, user_id=current_user.id
-    )
+    db_review = update_review(db, review_id=review_id, review=review, user_id=current_user.id)
     if db_review is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

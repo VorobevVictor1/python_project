@@ -1,7 +1,7 @@
 """Pydantic схемы для валидации запросов и ответов API."""
 
-from pydantic import BaseModel, Field, EmailStr, ConfigDict
-from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 # ==================== AUTH ====================
 
@@ -69,7 +69,7 @@ class BookResponse(BaseModel):
 class ReviewCreate(BaseModel):
     book_id: int
     rating: float = Field(..., ge=1.0, le=5.0)
-    comment: Optional[str] = Field(None, max_length=1000)
+    comment: str | None = Field(None, max_length=1000)
 
 
 class ReviewResponse(BaseModel):
@@ -77,7 +77,7 @@ class ReviewResponse(BaseModel):
     book_id: int
     user_id: int
     rating: float
-    comment: Optional[str] = None
+    comment: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 

@@ -1,15 +1,16 @@
 """Фикстуры и конфигурация для тестов."""
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.auth import get_password_hash
 from app.database import Base, get_db
+from app.infrastructure.in_memory_queue import InMemoryTaskQueue
 from app.main import app
 from app.models import User
-from app.auth import get_password_hash
-from app.infrastructure.in_memory_queue import InMemoryTaskQueue
 from app.routers.deps import get_task_queue
 
 # Используем in-memory SQLite для полной изоляции тестов
@@ -38,17 +39,17 @@ def db_session():
 @pytest.fixture(scope="function")
 def client(db_session):
     """Фикстура: TestClient с переопределённой зависимостью get_db."""
-    
+
     def override_get_db():
         # Просто отдаём сессию, не закрывая её после каждого запроса
         # Жизненным циклом сессии управляет фикстура db_session
         yield db_session
-    
+
     app.dependency_overrides[get_db] = override_get_db
-    
+
     with TestClient(app) as test_client:
         yield test_client
-    
+
     # Очищаем зависимости после теста
     app.dependency_overrides.clear()
     # Сессия закроется в фикстуре db_session (в её finally-блоке)
@@ -58,22 +59,19 @@ def client(db_session):
 def test_user(db_session):
     """Фикстура: тестовый пользователь с токеном."""
     from app.auth import create_access_token
-    
+
     user = User(
         username="testuser",
         email="test@example.com",
-        hashed_password=get_password_hash("testpass123")
+        hashed_password=get_password_hash("testpass123"),
     )
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
-    
+
     token = create_access_token(data={"sub": user.username})
-    return {
-        "user": user,
-        "token": token,
-        "headers": {"Authorization": f"Bearer {token}"}
-    }
+    return {"user": user, "token": token, "headers": {"Authorization": f"Bearer {token}"}}
+
 
 @pytest.fixture(scope="function")
 def task_queue():
@@ -87,7 +85,7 @@ def task_queue():
 def client_with_queue(client, task_queue):
     """
     Комбинированная фикстура: TestClient + переопределённая очередь.
-    
+
     Используется в интеграционных тестах, где нужно проверять
     и API, и постановку задач в очередь.
     """

@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+
 from app.models import Author, Book, Review
 from app.schemas import AuthorCreate, BookCreate, ReviewCreate
 
@@ -109,15 +110,9 @@ def get_review(db: Session, review_id: int) -> Review | None:
     return db.query(Review).filter(Review.id == review_id).first()
 
 
-def update_review(
-    db: Session, review_id: int, review: ReviewCreate, user_id: int
-) -> Review | None:
+def update_review(db: Session, review_id: int, review: ReviewCreate, user_id: int) -> Review | None:
     # Пользователь может обновить только свой отзыв
-    db_review = (
-        db.query(Review)
-        .filter(Review.id == review_id, Review.user_id == user_id)
-        .first()
-    )
+    db_review = db.query(Review).filter(Review.id == review_id, Review.user_id == user_id).first()
     if not db_review:
         return None
     for key, value in review.model_dump().items():
@@ -128,11 +123,7 @@ def update_review(
 
 
 def delete_review(db: Session, review_id: int, user_id: int) -> bool:
-    db_review = (
-        db.query(Review)
-        .filter(Review.id == review_id, Review.user_id == user_id)
-        .first()
-    )
+    db_review = db.query(Review).filter(Review.id == review_id, Review.user_id == user_id).first()
     if not db_review:
         return False
     db.delete(db_review)

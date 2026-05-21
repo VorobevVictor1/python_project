@@ -23,7 +23,7 @@ def create_new_review(
     review: ReviewCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    queue: TaskQueueProtocol = Depends(get_task_queue), 
+    queue: TaskQueueProtocol = Depends(get_task_queue),
 ):
     # 1. Сохраняем оценку в БД
     created_review = create_review(db=db, review=review, user_id=current_user.id)

@@ -1,32 +1,54 @@
+```markdown
+# Каталог книг — REST API на FastAPI
 
-# Каталог книг — REST API на FastAPI. Проект для ЦК МФТИ. 
-
-## Описание
-Веб-сервис для управления каталогом книг с поддержкой авторов, отзывов и рекомендательной аналитики. Реализует полный CRUD, JWT-аутентификацию и алгоритм взвешенного скоринга для рекомендаций.
+Веб-сервис для управления каталогом книг с поддержкой авторов, отзывов и рекомендательной аналитики. Реализует полный CRUD, JWT-аутентификацию и алгоритм коллаборативной фильтрации для рекомендаций.
 
 ## Стек
-- FastAPI 0.115+, Python 3.10+
-- SQLAlchemy 2.0, SQLite
+- FastAPI 0.115+, Python 3.11+
+- SQLAlchemy 2.0, SQLite / PostgreSQL
 - Pydantic v2 для валидации
 - JWT (python-jose), bcrypt/argon2 для хеширования
 - pytest + TestClient для тестирования
+- numpy для векторных вычислений в рекомендациях
+- Redis (опционально) для очереди задач
 
 ## Установка и запуск
 
+### Локальная разработка
 ```bash
-# Основной сервис
-uv run uvicorn app.main:app --reload
+# Клонировать репозиторий
+git clone <repo_url>
+cd python_project
 
-# Воркер (в отдельном терминале)
-uv run python -m app.recommender.worker
+# Создать виртуальное окружение и установить зависимости
+uv venv
+uv sync
 
-# С инфраструктурой (Redis)
-docker compose up -d redis
-uv run uvicorn app.main:app --reload  # в другом терминале
-uv run python -m app.recommender.worker  # в третьем
+# Запустить сервер разработки
+uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+База данных `catalog.db` создаётся автоматически при первом запуске.
+
+### Запуск с инфраструктурой (Redis)
+```bash
+# Запустить Redis и сервисы через Docker Compose
+docker compose up -d
+
+# API доступен на http://127.0.0.1:8000
+# Воркер запускается автоматически в отдельном контейнере
 ```
 
-База данных `catalog.db` создаётся автоматически при первом запуске.
+### Запуск батч-воркера отдельно
+Если не используется Docker Compose, воркер можно запустить вручную в отдельном терминале:
+```bash
+# С in-memory очередью (для тестов)
+uv run python -m app.recommender
+
+# С Redis (предварительно запустить: docker compose up -d redis)
+export USE_IN_MEMORY_QUEUE=false
+export REDIS_URL=redis://localhost:6379/0
+uv run python -m app.recommender
+```
 
 ## Документация API
 После запуска сервера:
@@ -67,11 +89,35 @@ uv run python -m app.recommender.worker  # в третьем
 | PUT | /reviews/{id} | Обновить свой отзыв |
 | DELETE | /reviews/{id} | Удалить свой отзыв |
 
+### Рекомендации
+| Метод | Эндпоинт | Описание |
+|-------|----------|----------|
+| GET | /recommendations/{user_id} | Получить рекомендации для пользователя |
+
+Рекомендации пересчитываются асинхронно в батч-режиме. После создания отзыва задача на пересчёт попадает в очередь, воркер обрабатывает её в фоне и сохраняет результат в кэш. Эндпоинт `GET /recommendations/{user_id}` мгновенно возвращает данные из кэша.
+
 ### Аналитика
 | Метод | Эндпоинт | Описание |
 |-------|----------|----------|
-| POST | /analytics/recommend | Рекомендации книг (алгоритм скоринга) |
 | GET | /analytics/stats | Статистика каталога |
+
+## Архитектура рекомендаций
+
+```
+┌─────────────────┐     ┌─────────────┐     ┌─────────────────┐
+│   FastAPI App   │     │   Queue     │     │  Batch Worker   │
+│                 │     │ (In-Mem/    │     │ (отдельный      │
+│ • Принимает     │────►│   Redis)    │◄────│   процесс)      │
+│   события       │     │             │     │                 │
+│ • Отдаёт кэш    │◄────│             │────►│ • Читает задачи │
+│   рекомендаций  │     │             │     │ • Считает рек-ции│
+└─────────────────┘     └─────────────┘     │ • Пишет в кэш   │
+                                            └─────────────────┘
+```
+
+**Алгоритм**: косинусное сходство оценок пользователей.
+**Реализация**: `app/recommender/engine.py` (numpy для векторных операций).
+**Кэширование**: результаты сохраняются в таблицу `recommendation_cache`.
 
 ## Тестирование
 
@@ -82,11 +128,31 @@ uv run pytest --cov=app --cov-report=term-missing
 # Запустить без покрытия (быстрее)
 uv run pytest --no-cov -v
 
-# HTML-отчёт о покрытии (откроется в браузере)
+# HTML-отчёт о покрытии
 uv run pytest --cov=app --cov-report=html
 ```
 
-Текущее покрытие: 81.74%.
+### Демо-скрипт и автопроверка
+Скрипт генерирует тестовые данные и проверяет логику рекомендаций:
+
+```bash
+# Локальный запуск
+uv run python scripts/demo_and_test.py
+
+# С подробным выводом
+uv run python scripts/demo_and_test.py --verbose
+
+# Сохранить данные после теста (для ручной проверки)
+uv run python scripts/demo_and_test.py --no-cleanup
+
+# В Docker (если контейнеры запущены)
+docker compose exec api uv run python scripts/demo_and_test.py --verbose --no-cleanup
+```
+
+**Аргументы скрипта**:
+- `--no-cleanup` — не удалять тестовые данные после проверки
+- `--verbose`, `-v` — подробный вывод
+- `--use-redis` — использовать Redis для очереди (по умолчанию: in-memory)
 
 ## Качество кода
 
@@ -94,23 +160,61 @@ uv run pytest --cov=app --cov-report=html
 # Проверка pylint (целевая оценка ≥8.0)
 uv run pylint app/ --exit-zero
 ```
-Оценка 9.92.
 
 ## Структура проекта
 ```
-book_catalog/
+.
 ├── app/
-│   ├── main.py          # Точка входа, lifespan, роутеры
-│   ├── database.py      # SQLite engine, сессии
-│   ├── models.py        # SQLAlchemy модели
-│   ├── schemas.py       # Pydantic схемы
-│   ├── crud.py          # CRUD-функции
-│   ├── auth.py          # JWT, хеширование, зависимости
-│   └── routers/         # Эндпоинты по сущностям
-├── tests/               # Автоматические тесты
-├── requirements.txt     # Зависимости
-├── .pylintrc           # Конфигурация pylint
-└── pytest.ini          # Конфигурация pytest
+│   ├── main.py                 # Точка входа FastAPI
+│   ├── database.py            # Настройки БД
+│   ├── models.py              # SQLAlchemy модели
+│   ├── schemas.py             # Pydantic схемы
+│   ├── crud.py                # CRUD-функции
+│   ├── auth.py                # JWT, хеширование
+│   ├── core/
+│   │   ├── config.py          # Настройки через pydantic-settings
+│   │   └── task_queue.py      # Абстракция очереди задач
+│   ├── infrastructure/
+│   │   ├── in_memory_queue.py # Реализация очереди для тестов
+│   │   └── redis_queue.py     # Реализация очереди для Redis
+│   ├── recommender/
+│   │   ├── engine.py          # Ядро алгоритма (numpy)
+│   │   ├── service.py         # Сервисный слой (БД)
+│   │   ├── schemas.py         # Pydantic-схемы для API
+│   │   ├── types.py           # Dataclass DTO
+│   │   ├── worker.py          # Логика батч-воркера
+│   │   └── __main__.py        # Точка входа для запуска воркера
+│   └── routers/
+│       ├── auth.py
+│       ├── authors.py
+│       ├── books.py
+│       ├── reviews.py         # Триггерит пересчёт рекомендаций
+│       ├── analytics.py
+│       └── recommendations.py # Эндпоинты рекомендаций
+├── scripts/
+│   └── demo_and_test.py       # Демо-данные и автопроверка
+├── tests/
+│   ├── unit/                  # Юнит-тесты
+│   └── integration/           # Интеграционные тесты
+├── docker-compose.yml         # Инфраструктура для разработки
+├── pyproject.toml            # Зависимости и метаданные
+├── .env.example              # Шаблон конфигурации
+└── README.md                 # Этот файл
+```
+
+## Конфигурация
+Переменные окружения (или файл `.env`):
+```env
+# Database
+DATABASE_URL=sqlite:///./catalog.db
+
+# Queue
+USE_IN_MEMORY_QUEUE=true      # true для тестов, false для Redis
+REDIS_URL=redis://localhost:6379/0
+
+# Recommendations
+RECOMMENDATION_TOP_N=10       # Количество рекомендаций в ответе
+RECOMMENDATION_MIN_RATINGS=3  # Мин. оценок пользователя для расчёта
 ```
 
 ## Автор

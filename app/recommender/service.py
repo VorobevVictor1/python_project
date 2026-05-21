@@ -87,7 +87,8 @@ class RecommendationService:
         scores = json.loads(cache.scores)
 
         recommendations = [
-            Recommendation(book_id=bid, score=scr) for bid, scr in zip(book_ids, scores, strict=True)
+            Recommendation(book_id=bid, score=scr)
+            for bid, scr in zip(book_ids, scores, strict=True)
         ]
 
         return UserRecommendations(

@@ -13,7 +13,7 @@ from app.models import User
 from app.schemas import TokenData
 
 # === Конфигурация ===
-SECRET_KEY = "dev-secret-key-change-in-production-please"  # 🔒 Вынесите в .env для продакшена
+SECRET_KEY = "dev-secret-key-change-in-production-please"  #  Вынесите в .env для продакшена
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

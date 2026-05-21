@@ -1,4 +1,3 @@
-
 import numpy as np
 
 from app.recommender.types import ReadingEventDTO, Recommendation, UserRecommendations

@@ -14,6 +14,52 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - book-rec-net
+
+  api:
+    build: .
+    container_name: book-rec-api
+    command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./data/catalog.db?check_same_thread=False&timeout=30
+      - REDIS_URL=redis://redis:6379/0
+      - USE_IN_MEMORY_QUEUE=false
+      - PYTHONDONTWRITEBYTECODE=1
+    volumes:
+      - ./data:/app/data
+      - ./app:/app/app:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - book-rec-net
+
+  worker:
+    build: .
+    container_name: book-rec-worker
+    command: ["uv", "run", "python", "-m", "app.recommender"]
+    environment:
+      - DATABASE_URL=sqlite:///./data/catalog.db?check_same_thread=False&timeout=30
+      - REDIS_URL=redis://redis:6379/0
+      - USE_IN_MEMORY_QUEUE=false
+      - PYTHONDONTWRITEBYTECODE=1
+    volumes:
+      - ./data:/app/data
+      - ./app:/app/app:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - book-rec-net
+
+networks:
+  book-rec-net:
+    driver: bridge
 
 volumes:
   redis_data:

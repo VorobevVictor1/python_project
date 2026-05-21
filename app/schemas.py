@@ -1,6 +1,5 @@
 """Pydantic схемы для валидации запросов и ответов API."""
 
-
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 # ==================== AUTH ====================
